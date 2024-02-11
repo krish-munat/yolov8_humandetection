@@ -1,0 +1,37 @@
+import cv2
+import supervision as sv
+from ultralytics import YOLO
+
+# Initialize YOLOv5 with the path to the model weights file
+model = YOLO("yolov8s.pt")
+
+# Open the video stream
+video = cv2.VideoCapture('http://192.168.1.104:8080/video')
+
+# Initialize bbox_annotator
+bbox_annotator = sv.BoxAnnotator()
+
+# Process the video frames
+while video.isOpened():
+    ret, frame = video.read()
+    if ret == True:
+        result = model(frame)[0]
+        detections = sv.Detections.from_ultralytics(result)  # Pass result as a list
+        detections = detections[detections.confidence > 0.5]
+        labels = [
+            result.names[class_id]
+            for class_id
+            in detections.class_id
+        ]
+        frame = bbox_annotator.annotate(scene=frame,
+                                        detections=detections,
+                                        labels=labels)
+        cv2.imshow("Frame", frame)
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+    else:
+        break
+video.release()
+
+
+cv2.destroyAllWindows()
